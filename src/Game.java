@@ -1,12 +1,28 @@
 import bagel.*;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.lang.Math;
+import java.util.concurrent.TimeUnit;
+
 import bagel.util.Point;
+import javax.swing.*;
+
+import javax.sound.sampled.*;
+
+
 import static bagel.Window.close;
 
 public class Game extends AbstractGame {
     private final Image house = new Image("res/images/bg2.png");
     private final Image player = new Image("res/images/player.png");
     private final Image apple = new Image("res/images/cake.png");
+
+    private final MusicPlayer eat = new MusicPlayer("res/Music/eat.wav");
+    private final MusicPlayer bounce = new MusicPlayer("res/Music/bounce2.wav");
+    private final MusicPlayer background = new MusicPlayer("res/Music/background.wav");
+
     private final Font myName = new Font("res/Font/BillionDreams_PERSONAL.ttf",52);
     private final Font myScore = new Font("res/Font/Hysteria.ttf",45);
     private final String  title1 = "Rainko With a Cake";
@@ -17,8 +33,8 @@ public class Game extends AbstractGame {
 
     private final int damage = 10, heal = 5;
     private final double gravity = 0.6, groundLevel = 624;
-    private final double moveDamping = 0.99, bumpDamping = 0.87, jumpAcceleration = 2, radius = 35;
-    private final double minimumBounceSpeed = 5;
+    private final double moveDamping = 0.99, bumpDamping = 0.85, jumpAcceleration = 2, radius = 35;
+    private final double minimumBounceSpeed = 8;
 
     private double x, y;
     private double xSpeed, ySpeed;
@@ -43,7 +59,9 @@ public class Game extends AbstractGame {
         this.health = 100;
         this.score = 0;
         this.isGameOver = false;
+
     }
+
 
     public void gameOver(){
         health=0;
@@ -61,10 +79,18 @@ public class Game extends AbstractGame {
      *
      * Explore the capabilities of Bagel: https://people.eng.unimelb.edu.au/mcmurtrye/bagel-doc/
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Throwable {
+        /*MusicPlayer player = new MusicPlayer("res/Music/NUOYANCHEN_performance_w8_1074521.mp3");     //创建音乐播放器*/
+
+
         // Create new instance of game and run it
         Game game = new Game();
+        game.background.start(true, false);
         game.run();
+
+        game.background.finalize();
+        game.eat.finalize();
+        game.bounce.finalize();
     }
 
     /**
@@ -76,21 +102,19 @@ public class Game extends AbstractGame {
         double walkAcceleration = 0.2 + 0.1 * Math.random();
 
         if(!isGameOver) {
-            if (input.isDown(Keys.LEFT) || input.isDown(Keys.A)) {
+            if ((x>60)&&(input.isDown(Keys.LEFT) || input.isDown(Keys.A))) {
                 xSpeed -= walkAcceleration;
             }
-            if (input.isDown(Keys.RIGHT) || input.isDown(Keys.D)) {
+            if ((x<Window.getWidth()-60)&&(input.isDown(Keys.RIGHT) || input.isDown(Keys.D))) {
                 xSpeed += walkAcceleration;
             }
-            if (input.wasPressed(MouseButtons.LEFT) || input.wasPressed(Keys.UP) || input.wasPressed(Keys.W) || input.wasPressed(Keys.SPACE)) {
+            if (input.wasPressed(MouseButtons.LEFT) || input.wasPressed(Keys.UP) || input.wasPressed(Keys.W) || input.wasPressed(Keys.SPACE) || input.wasPressed(Keys.L)) {
                 ySpeed -= 5 * jumpAcceleration + 1 * Math.random();
             }
 
             if (input.wasPressed(Keys.ESCAPE)) {
                 close();
             }
-
-
 
         }else{
             if (input.isDown(Keys.ENTER)) {
@@ -103,12 +127,15 @@ public class Game extends AbstractGame {
         }
         x += xSpeed;
         y += ySpeed;
-        ySpeed += gravity;
+        if (y<Window.getHeight()) {
+            ySpeed += gravity;
+        }
         xSpeed *= moveDamping;
 
         if (y < 0) {
             y = 0;
             ySpeed = 0;
+            bounce.start(false, false);
             health -= damage;
         } // SKY
 
@@ -118,20 +145,21 @@ public class Game extends AbstractGame {
             if (Math.abs(ySpeed) < minimumBounceSpeed) {
                 ySpeed = 0;
             } else {
+                bounce.start(false, false);
                 health -= (damage-5);
             }
         } //GROUND
 
 
-        if (x < 0) {
+        if (x < 0 || x > Window.getWidth()) {
             xSpeed *= -bumpDamping;
-        } // LEFT
+            bounce.start(false, false);
+        } // LEFT OR RIGHT
 
-        if (x > Window.getWidth()) {
-            xSpeed *= -bumpDamping;
-        } // RIGHT
         if (Math.abs(x - xApple) < radius && Math.abs(y - yApple) < radius && (!isGameOver)) {
             // Collision
+
+            eat.start(false, false);
             xApple = Window.getWidth() * Math.random();
             yApple = groundLevel * Math.random();
             score += 10;
