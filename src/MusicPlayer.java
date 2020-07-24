@@ -140,16 +140,19 @@ public class MusicPlayer {
             }
         });
         mainThread.start();
+        if(clear){this.run=false;this.mainThread.interrupt();}
     }
 
     //外部调用控制方法：暂停音频线程
     public void stop(){
+        this.mainThread.stop();//停止线程
+        /*
         new Thread(new Runnable(){
             public void run(){
                 stopMusic();
 
             }
-        }).start();
+        }).start();*/
     }
     //外部调用控制方法：继续音频线程
     public void continues(){
